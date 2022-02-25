@@ -120,7 +120,7 @@ if __name__ == '__main__':
 	parser.add_argument('-f','--flowdroid', help="Use FlowDroid to detect false positive / negative", action='store_true')
 	parser.add_argument('-p','--platform', help="Android SDK platform folder")
 	parser.add_argument('-q', '--quiet', help="Output to parse", action='store_true')
-	parser.add_argument('-D', '--database', help="database where to save all violations")
+	parser.add_argument('-D', '--database', help="Database where to save all violations")
 	args = parser.parse_args()
 
 	if args.flowdroid and args.platform is None:
