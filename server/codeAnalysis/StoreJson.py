@@ -32,7 +32,7 @@ class StoreJson():
 		if database_name == None:	# database is not in use
 			return
 
-		if not StoreJson.outputcol:
+		if StoreJson.outputcol == None:
 			StoreJson.initMongoDb(database_name)
 
 		if collection == "outputcol":
