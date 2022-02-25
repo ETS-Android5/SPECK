@@ -4,10 +4,12 @@ from Parser import *
 from Timer import *
 import os
 
+
 class Filter():
 	def __init__(self, directory, packages):
 		self.directory = directory
 		self.packages = packages
+
 
 	def getPackagesImported(self, f):
 		packagesImported = []
@@ -24,30 +26,24 @@ class Filter():
 				break
 		return packagesImported
 
+
+	# returns all the files which import the "interesting" packages
+	# ONE imported package is enough to keep the file
 	def execute(self):
 		files = []
-
 		javaFiles = Parser.getAllPath(self.directory, '.java')
-
-		os.system("rm test_imports.txt")
-
-		for file in javaFiles:
+		for n,file in enumerate(javaFiles):
 			with open(file, 'r') as f:
 				packagesImported = self.getPackagesImported(f)
-
-				myfile = open("test_imports.txt", "a")
-
-				for p in packagesImported:
-					myfile.write(f'{p}\n')
-
-				myfile.close()
-
-				if self.packages[0] == "":
-					break
-
+				# print(packagesImported)
 				# Add file to the list IF ONE package was found
 				for p in self.packages:
+					if p == "":					# kind of a 'naive' default: analyze all .java files
+						files.append(file)
+						break	
 					if p in packagesImported:
 						files.append(file)
 						break
 		return files
+
+
