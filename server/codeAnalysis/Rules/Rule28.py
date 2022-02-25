@@ -38,66 +38,73 @@ class Rule28(Rules):
 		self.findXml()
 		self.show(28, "Opt out of cleartext traffic")
 
-	def getNetworkFile(self, app, xmlReader):
-		for tag in app:
-			for arg in tag[XmlReader.ARGS]:
-				if "android:networkSecurityConfig" in arg:
-					return self.manifest.replace("AndroidManifest.xml", "") + xmlReader.getArgValue(arg).replace("@", "") + ".xml"
-		return None
 
-	def getBadDom(self, domain, reader):
-		NotIn = []
+	# This function returns the arg-value pair splitted
+	def get_arg_value_split(self, arg):
+		split = arg.split("=")
+		argName = split[0].strip()
+		val = split[1].strip()
+		value = val[1:len(val)-1]
+		return argName, value
 
-		for tag in domain:
-			found = False
-			for arg in tag[XmlReader.ARGS]:
-				if "cleartextTrafficPermitted" in arg:
-					found = True
-					value = reader.getArgValue(arg)
 
-					if value == "true":
-						NotIn.append(tag)
-					break
+	# Function used to check if a specific argument is present in a list: if that's the case, return its position in the list
+	# It also returns the corresponding value
+	def get_arg_index_and_value(self, args, arg):
+		for i in range(len(args)):
+			if arg in args[i]:
+				_, value = self.get_arg_value_split(args[i])
+				return i, value 		# found at index i
+		return -1, None 				# not found
 
-			if not found:
-				NotIn.append(tag)
 
-		return NotIn
+	# Function that outputs the XmlReader obj corresponding to an xml file different from AndroidManifest (e.g. network_security_config.xml)
+    # 'arg_value' should be the xml argument value
+    # it works by replacing the AndroidManifest path with the 'arg_value' one
+	def analyse_non_manifest_xml(self, manifest_path, arg_value):
+		# case where we check our developed app
+		if 'build/intermediates/merged_manifest' in manifest_path:
+			xml_file_path = manifest_path.replace('build/intermediates/merged_manifest/debug/AndroidManifest.xml', 'src/main/res/') + arg_value.replace('@', '') + '.xml'
+		# case where we check an app decompiled from apk
+		else:
+			xml_file_path = manifest_path.replace('AndroidManifest.xml', 'res/') + arg_value.replace('@', '') + '.xml'
+		# self.maxFiles += 1 # this is used as a display thing... --> let the interpreter add it!
+		return XmlReader(xml_file_path)
+
 
 	def run(self):
 		self.loading()
 
+		xmlReader = XmlReader(self.manifest)
+
 		if self.manifest != None:
-			xmlReader = XmlReader(self.manifest)
+			violations = []
+			application = xmlReader.getArgsTag('application')             
+			args = application[0]['args']                       
+			index, value = self.get_arg_index_and_value(args, "android:networkSecurityConfig")  
 
-			app = xmlReader.getArgsTag("application")
-			networkFile = self.getNetworkFile(app, xmlReader)
-
-			if (networkFile != None):
+			if index >= 0:
+				networkFileReader = self.analyse_non_manifest_xml(self.manifest, value)       
 				self.maxFiles += 1
-				securityConfigReader = XmlReader(networkFile)
+				domain = networkFileReader.getArgsTag('domain-config')         
+				for d in domain: 
+					args = d['args']
+					dIndex, dValue = self.get_arg_index_and_value(args, "cleartextTrafficPermitted")     
+					if dIndex >= 0:
+						if dValue == "true":
+							violations.append(d)
 
-				domain = securityConfigReader.getArgsTag("domain-config")
-				badDom = self.getBadDom(domain, securityConfigReader)
+				violations = networkFileReader.constructToken(violations)
+				violations = Parser.setMsg(violations, R.WARNING, self.errMsg)
 
-				NotIn = xmlReader.constructToken(badDom)
+				self.updateWN(networkFileReader.getFile(), violations)
+				networkFileReader.close()
 
-				# Set log msg
-				NotIn 	= Parser.setMsg(NotIn, R.WARNING, self.errMsg)
-
-				self.updateWN(networkFile, NotIn)
-				securityConfigReader.close()
-			else : 
-				self.AndroidOkMsg = self.AndroidOkMsg2
-				self.updateWN(self.manifest, [])
+			self.loading()
 
 			xmlReader.close()
-			self.loading()
 
 			self.store(28, self.AndroidOkMsg, self.AndroidErrMsg, self.AndroidText, self.category)
 			self.display(XmlReader)
-
-
-
 
 
