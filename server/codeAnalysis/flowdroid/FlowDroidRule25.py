@@ -3,7 +3,7 @@ import copy
 import os.path
 import subprocess
 import sys
-
+from R import *
 from FlowDroid import *
 
 

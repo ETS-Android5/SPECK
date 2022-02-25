@@ -1,5 +1,7 @@
 #!/usr/bin/python3
 import subprocess, os.path, copy, sys
+from R import *
+from Parser import *
 from FlowDroid import *
 
 class FlowDroidRule1():
