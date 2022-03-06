@@ -7,6 +7,7 @@ import os
 import json
 import pymongo
 
+
 class StoreJson():
 	outputcol = None
 
@@ -36,21 +37,40 @@ class StoreJson():
 			StoreJson.initMongoDb(database_name)
 
 		if collection == "outputcol":
-			StoreJson.outputcol.insert_one(rec)
+			outputcol_cursor = StoreJson.outputcol.find()		# retrieve all outputcol
+			found = False
+			# for x in outputcol_cursor:
+			# 	if rec["apk"] == x["apk"] and rec["rule"] == x["rule"]:			# check if the analysis of the app was already done on the rule 
+			# 		print(f"\033[1m\033[33m[!] App {rec['apk']} was already analysed on Rule {rec['rule']}!\033[0m\033[0m")
+			# 		print(x)									# print the analysis previously stored
+			# 		found = True
+			# 		break
+			if not found:										# if new analysis, then add its outputcol in the db
+				StoreJson.outputcol.insert_one(rec)
+
 		elif collection == "rulestats":
-			StoreJson.rulestats.insert_one(rec)
+			rulestats_cursor = StoreJson.rulestats.find()		# retrieve all rulestats
+			found = False
+			for x in rulestats_cursor:
+				if rec["apk"] == x["apk"] and rec["rule"] == x["rule"]:			# check if the analysis of the app was already done on the rule 
+					print(f"\033[1m\033[35m[!] App {rec['apk']} was already analysed on Rule {rec['rule']}!\033[0m\033[0m")
+					print(x)									# print the analysis previously stored
+					found = True
+					break
+			if not found:										# if new analysis, then add its rulestats in the db
+				StoreJson.rulestats.insert_one(rec)
+
 		else:
-			print("Collection {} does not exist!!".format(collection))
+			print(f"Collection {collection} does not exist!!")
 			exit(0)
+
 
 	@staticmethod
 	def showResults(results, nb, Reader, packageDir, validation, nr, apk, database=None, errorMsg=""):
-
 		for file in results:
 			kind = "[EXTERNAL]"
 			if ((packageDir != None) and (packageDir in file[0])) or ("AndroidManifest.xml" in file[0]):
 				kind = "[INTERNAL]"
-
 
 			for X in [R.WARNING, R.CRITICAL, R.OK]:
 				if X in file[1] and len(file[1][X]) > 0:
@@ -83,3 +103,5 @@ class StoreJson():
 						myRecord['eMsg'] = eMsg
 
 						StoreJson.store("outputcol", myRecord, database)
+
+
